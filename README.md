@@ -1,50 +1,72 @@
-# Welcome to your Expo app 👋
+# MangaReaderV2: The Proper Job
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Listen up, you lot. This ain't your granddad's manga reader. This is MangaReaderV2 - a proper piece of kit that'll work on whatever fancy rectangle you're holding - iOS, Android, or that web browser you're so fond of.
 
-## Get started
+## The Gear (Tech Stack)
 
-1. Install dependencies
+We're rocking with:
+- **Expo & React Native** - The backbone, innit? Cross-platform muscle without the faff.
+- **Expo Router** - File-based routing. Sharp as a tack, this one.
+- **Zustand** - State management that doesn't make you want to headbutt a wall.
+- **Axios** - For chatting with your Kavita API without breaking a sweat.
+- **SecureStore** - Keeps your tokens locked up tighter than a drum.
+- **Reanimated** - Makes things move smooth as butter on a hot day.
+- **shadcn/ui & Tailwind CSS** - For making it pretty without crying into your keyboard.
+
+## The Journey (Screen Flow)
+
+1. **Server Connection** - Your first port of call. No connection, no party.
+2. **Library** - The grand tour of your collection. Neat little grid of manga covers.
+3. **Series Detail** - All the nitty-gritty about your chosen manga.
+4. **Reader** - Where the magic happens. Flip through pages like you're thumbing through cash.
+5. **Settings** - Tweak it to your liking. We ain't judging.
+
+---
+
+## The State of Affairs
+
+Right, so you want to know how this bad boy is structured? We've got the full blueprint laid out - components, routing, theming - the whole nine yards.
+
+👉 [Check the State File](./theState.md) if you fancy a proper look under the hood.
+
+## The Masterplan
+
+Now, don't go thinking we're making this up as we go. We've got a plan sharper than a razor. Authentication, API setup, state management - it's all mapped out like a proper heist.
+
+👉 [Get your eyes on The Plan](./thePlan.md) to see how this beauty comes together.
+
+---
+
+## Getting This Show on the Road
+
+1. Install the dependencies (the crew for our job):
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Fire up the engine:
 
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
-
+Now pick your poison:
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Expo Go](https://expo.dev/go)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Start tinkering in the **app** directory. File-based routing means what it says on the tin.
 
-## Get a fresh project
+## Fresh Start
 
-When you're ready, run:
+Want to wipe the slate?
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+*"Proper preparation prevents poor performance."* - Some wise guy who knew what they were talking about.
