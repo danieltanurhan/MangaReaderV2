@@ -28,6 +28,14 @@ export default function MainLayout() {
           headerShown: true 
         }} 
       />
+      {/* Add screen configuration for the series detail screen */}
+      <Stack.Screen 
+        name="(main)/series/[id]" 
+        options={{ 
+          headerShown: true,
+          presentation: 'push' 
+        }} 
+      />
     </Stack>
   );
 }

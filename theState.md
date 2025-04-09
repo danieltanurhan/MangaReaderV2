@@ -8,6 +8,7 @@ This is an Expo Router project with a file-based routing system, implementing a 
 - Using Expo Router with file-based routing
 - Authentication flow via `/(auth)/connect.tsx`
 - Main content via `/(main)/home.tsx`
+- Series details via `/(main)/series/[id].tsx`
 - Root layout handling navigation and auth checks
 
 ### API Integration
@@ -40,6 +41,15 @@ This is an Expo Router project with a file-based routing system, implementing a 
 - Pull-to-refresh functionality
 - Error handling and loading states
 
+### Series Detail Screen
+- Hero section with cover image and metadata
+- Reading progress indicator with percentage
+- Continue/Read Again button with smart navigation
+- Volume selector with horizontal scrolling
+- Normalized chapters list with proper labeling
+- Visual indicators for read status
+- Support for invalid metadata handling
+
 ### UI Components
 - `ThemedView` and `ThemedText` for consistent styling
 - `MangaCard` for displaying series
@@ -47,12 +57,6 @@ This is an Expo Router project with a file-based routing system, implementing a 
 - Basic navigation structure
 
 ## Pending Features
-
-### Series Detail Screen
-- Cover image with details
-- Volume/chapter listing
-- Metadata display
-- Reading progress
 
 ### Reader Experience
 - Manga reader implementation

@@ -26,12 +26,12 @@ export default function HomeScreen() {
     fetchAllSeries();
   }, []);
 
-    // Redirect if not authenticated
-    useEffect(() => {
-      if (!isAuthenticated) {
-        router.replace('/(auth)/connect');
-      }
-    }, [isAuthenticated]);
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/(auth)/connect');
+    }
+  }, [isAuthenticated]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -52,7 +52,6 @@ export default function HomeScreen() {
         id={String(item.id)} // Convert to string safely
         title={item.name || 'Unknown Title'}
         coverUrl={item.id ? getSeriesCoverUrl(item.id) : ''}
-        onPress={() => console.log(`Pressed manga: ${item.name || 'Unknown'}`)}
       />
     );
   };

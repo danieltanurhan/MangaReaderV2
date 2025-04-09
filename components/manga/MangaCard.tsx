@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
@@ -17,8 +18,18 @@ const CARD_WIDTH = (width - 36) / 2; // 2 columns with 12px padding on sides and
 const CARD_HEIGHT = CARD_WIDTH * 1.5; // 2:3 aspect ratio common for manga covers
 
 export function MangaCard({ id, title, coverUrl, unreadCount, onPress }: MangaCardProps) {
+  const router = useRouter();
   const cardBgColor = useThemeColor({}, 'background');
   const shadowColor = useThemeColor({}, 'text');
+  
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      // Update the navigation route to match the new location
+      router.push(`/(main)/series/${id}`);
+    }
+  };
   
   return (
     <TouchableOpacity 
@@ -30,7 +41,7 @@ export function MangaCard({ id, title, coverUrl, unreadCount, onPress }: MangaCa
         }
       ]}
       activeOpacity={0.8}
-      onPress={onPress}
+      onPress={handlePress}
     >
       <View style={styles.imageContainer}>
         <Image 
