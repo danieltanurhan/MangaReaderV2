@@ -1,39 +1,33 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'expo-router';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
+export default function MainLayout() {
+  const { isAuthenticated, checkAuthentication } = useAuthStore();
+  const router = useRouter();
+  
+  // Verify authentication when accessing main routes
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    async function verifyAuth() {
+      const authenticated = await checkAuthentication();
+      if (!authenticated) {
+        router.replace('/(auth)/connect');
+      }
     }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
+    
+    verifyAuth();
+  }, []);
+  
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen 
+        name="(main)/home" 
+        options={{ 
+          title: "My Library",
+          headerShown: true 
+        }} 
+      />
+    </Stack>
   );
 }

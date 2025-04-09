@@ -13,6 +13,10 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // New mappings for connect screen
+  'server': 'computer',
+  'person': 'person',
+  'lock': 'lock',
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],

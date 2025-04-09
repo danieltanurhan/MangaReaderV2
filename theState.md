@@ -1,60 +1,73 @@
-# Project Structure Overview
+# Current Project State
 
-This is an Expo Router project with a file-based routing system, organized as follows:
+This is an Expo Router project with a file-based routing system, implementing a mobile manga reader for Kavita servers.
 
-## Routing
+## Core Architecture
 
-- Uses Expo Router file-based routing
-- Main app structure is in `app` folder
-- Tab-based navigation in `(tabs)` folder
-- Root layout in `_layout.tsx`
-
-## UI Components
-
-- Themed components in `components` (like `ThemedText` and `ThemedView`)
-- UI elements like `ParallaxScrollView` for visual effects
-- Utility components like `Collapsible`
-
-## Styling/Theming
-
-- Dark/light mode support via `useColorScheme`
-- Theme colors defined in `Colors.ts`
-- Responsive styling using React Native's `StyleSheet`
-
-## Key Technical Features
-
-### Theme System
-
-- Automatically responds to system dark/light mode
-- Custom themed components for consistent appearance
-
-### Navigation
-
-- Tab navigation with custom tab bar
-- Stack navigation for screens
-
-### Animation
-
-- Uses React Native Reanimated for animations
-- Examples like the `HelloWave` component
-
-### Cross-Platform
-
-- Handles platform-specific code with `.ios.tsx` or `.web.ts` file extensions
-
-## For Building a Kavita Manga Reader
-
-For a Kavita manga reader app using the Kavita API, we'd need to:
+### Routing
+- Using Expo Router with file-based routing
+- Authentication flow via `/(auth)/connect.tsx`
+- Main content via `/(main)/home.tsx`
+- Root layout handling navigation and auth checks
 
 ### API Integration
+- Connection to Kavita servers via ODPS URL
+- JWT authentication with secure token storage
+- Cross-platform storage with SecureStore/localStorage
+- Axios client for API requests
 
-- Create API services to connect to your hosted Kavita solution
+### State Management
+- Zustand stores for global state
+- `authStore.ts`: Authentication, connection status, server info
+- `mangaStore.ts`: Series data, loading states, cover image URLs
 
-### Screen Design
+### Theming & UI
+- Dark/light mode with `useColorScheme`
+- Themed components with consistent styling
+- Responsive layouts for different devices
 
-- Authentication
-- Library browsing
-- Series/volume/chapter navigation
-- Manga reading experience
+## Completed Features
 
-The existing structure provides a solid foundation. We can use the theming system, navigation patterns, and component architecture while adding API integration and manga-specific UI elements.
+### Authentication
+- Connect to Kavita server via ODPS URL
+- Parse and validate connection URLs
+- Secure token storage
+- Auto-reconnection logic
+
+### Library Screen
+- Display manga series in grid layout
+- Manga cover images with titles
+- Pull-to-refresh functionality
+- Error handling and loading states
+
+### UI Components
+- `ThemedView` and `ThemedText` for consistent styling
+- `MangaCard` for displaying series
+- `Button` and `Input` components with theming support
+- Basic navigation structure
+
+## Pending Features
+
+### Series Detail Screen
+- Cover image with details
+- Volume/chapter listing
+- Metadata display
+- Reading progress
+
+### Reader Experience
+- Manga reader implementation
+- Page navigation
+- Reading controls
+- Progress tracking
+
+### Advanced Features
+- Search functionality
+- Library filtering
+- Reading lists
+- Settings screen
+- Performance optimizations
+
+## Technical Considerations
+
+### Cross-Platform Support
+- Platform-specific code for iOS, Android, and web
