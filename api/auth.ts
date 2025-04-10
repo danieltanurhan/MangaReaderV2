@@ -2,7 +2,7 @@
  * Authentication API functions
  * Handles all authentication-related API calls
  */
-import { apiClient, makeRequest, checkProxyAvailability } from './client';
+import { apiClient, makeRequest, checkProxyAvailability, debugApiClientConfig } from './client';
 import { getItem, setItem, removeItem, StorageKeys } from '@/utils/storage';
 import { Platform } from 'react-native';
 
@@ -25,6 +25,7 @@ export function parseOdpsUrl(odpsUrl: string): { baseUrl: string, apiKey: string
       odpsUrl = 'https://' + odpsUrl;
     }
     
+    
     const url = new URL(odpsUrl);
     const protocol = url.protocol;
     const hostname = url.hostname;
@@ -34,8 +35,11 @@ export function parseOdpsUrl(odpsUrl: string): { baseUrl: string, apiKey: string
     const pathSegments = url.pathname.split('/').filter(segment => segment.length > 0);
     const apiKey = pathSegments[pathSegments.length - 1];
 
+    
+
     // Validate that we extracted something that looks like an API key
     if (!apiKey || apiKey.length < 8) {
+      console.error('Invalid API key extracted from URL:', apiKey);
       return null;
     }
 
@@ -70,9 +74,10 @@ export async function refreshToken(baseUrl: string, apiKey: string): Promise<str
       'Plugin/authenticate',
       'POST',
       null,
-      { 
-        'x-api-key': apiKey,
-        'kavita-api-key': apiKey
+      undefined,
+      {
+        apiKey: apiKey,
+        pluginName: 'KavitaReader'
       }
     );
     
@@ -142,6 +147,7 @@ export async function connectToKavita(odpsUrl: string): Promise<{
   error?: string;
 }> {
   try {
+   
     // Parse ODPS URL
     const parsed = parseOdpsUrl(odpsUrl);
     if (!parsed) {
@@ -150,6 +156,9 @@ export async function connectToKavita(odpsUrl: string): Promise<{
         error: 'Invalid ODPS URL format'
       };
     }
+
+    await setItem(StorageKeys.BASE_URL, parsed.baseUrl);
+    await setItem(StorageKeys.API_KEY, parsed.apiKey);
     
     // Get token using API key
     const token = await refreshToken(parsed.baseUrl, parsed.apiKey);

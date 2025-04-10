@@ -1,107 +1,134 @@
-/**
- * Simple proxy server for Kavita API requests
- * Avoids CORS issues when accessing Kavita API from web browsers
- */
+// BASE URL IS HARDCODED IN
+
+// Example proxy server code fix
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-
+const axios = require('axios');
 const app = express();
-const PORT = process.env.PORT || 3031;
 
-// Setup middleware with more permissive CORS for development
+// Configure CORS properly
 app.use(cors({
-  origin: ['http://localhost:8081', 'http://localhost:19006', 'exp://localhost:8081'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: ['http://localhost:8081', 'https://your-production-url.com'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'kavita-api-key'],
 }));
 
-// Support larger response bodies for image data
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json());
 
-// Health check endpoint for proxy availability check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Handle preflight OPTIONS requests explicitly
+app.options('*', (req, res) => {
+  res.sendStatus(200);
 });
 
-// Main proxy endpoint
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// API proxy endpoint
 app.post('/api-proxy', async (req, res) => {
   try {
-    // Extract request details from body
-    const { target, method, body, kavitaApiKey } = req.body;
+    console.log('Received request:', req.body);
+    const { target, method, body, params } = req.body;
     
+
     if (!target) {
-      return res.status(400).json({ error: 'Missing required parameter: target' });
+      return res.status(400).json({ message: 'Missing required parameters' });
     }
-
-    console.log(`[PROXY] ${method} ${target}`);
-
-    // Get auth token from request headers or use provided API key
-    let authHeader = req.headers.authorization;
-    if (!authHeader && kavitaApiKey) {
-      authHeader = `Bearer ${kavitaApiKey}`;
-    }
-
-    // Build headers for the Kavita API request
+    
+    // Extract auth from request headers
     const headers = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
+    
+    // Add authorization if provided
+    if (req.headers.authorization) {
+      headers.Authorization = req.headers.authorization;
+    }
+    
+    // Build the query string in the backend
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    console.log('Query string:', queryString);
 
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
+    // Create the URL with base endpoint and query string
+    const url = `https://ftgglin3.leda.usbx.me/kavita/api/${target}${queryString}`;
+    
+    // Log the constructed URL in development mode
+    if (true) {
+      console.log('Making request to:', url);
+      console.log('With headers:', headers);
+      console.log('With method:', method || 'POST');
+      if (method !== 'GET') {
+        console.log('With body:', body);
+      }
     }
 
-    // Build the full URL for the Kavita API request
-    // Make sure this points to your Kavita server
-    const kavitaApiUrl = process.env.KAVITA_API_URL || 'https://ftgglin3.leda.usbx.me/kavita/api';
-    const url = `${kavitaApiUrl}/${target}`;
-
-    // Make the request to the Kavita API
-    const fetchOptions = {
-      method: method || 'GET',
-      headers: headers,
+    if (target.includes('/image/') || target.includes('/cover/')) {
+      // Set the response type to arraybuffer for binary data
+      const response = await axios({
+        method: 'GET',
+        url: url,
+        headers: headers,
+        responseType: 'arraybuffer'  // Important for binary data
+      });
+      
+      // Set the content-type from the original response
+      res.set('Content-Type', response.headers['content-type']);
+      // Send the raw binary data
+      return res.send(response.data);
+    }
+    
+    // Make the request to the actual API
+    let response;
+    if (method === 'GET') {
+      response = await axios({
+        method: 'GET',
+        url: url,
+        headers: headers
+      });
+    } else {
+      response = await axios({
+        method: method || 'POST',
+        url: url,
+        headers: headers,
+        data: body
+      });
+    }
+    
+    // Return the API response to the client
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error('Proxy error:', error.message);
+    
+    // Provide more helpful error information
+    const status = error.response?.status || 500;
+    const errorData = {
+      message: error.message,
+      details: error.response?.data || 'No additional details available'
     };
-
-    // Add body for non-GET requests
-    if (method !== 'GET' && body) {
-      fetchOptions.body = JSON.stringify(body);
-    }
-
-    // Forward the request
-    const response = await fetch(url, fetchOptions);
     
-    // Handle binary responses (like images)
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('image')) {
-      const buffer = await response.buffer();
-      
-      // Set appropriate headers
-      res.set('Content-Type', contentType);
-      res.set('Content-Length', buffer.length);
-      
-      // Send the binary data
-      return res.send(buffer);
+    // Log the full error for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Full error:', error);
+      console.error('Request failed with URL:', error.config?.url);
+      console.error('Request headers:', error.config?.headers);
+      console.error('Request data:', error.config?.data);
     }
     
-    // Handle JSON responses
-    const data = await response.json().catch(() => ({}));
-    
-    // Forward response status and data
-    res.status(response.status).json(data);
-  }
-  catch (error) {
-    console.error('[PROXY ERROR]', error);
-    res.status(500).json({
-      error: 'Proxy server error',
-      details: error.message
-    });
+    return res.status(status).json(errorData);
   }
 });
 
-// Start the server
+const PORT = process.env.PORT || 3031;
 app.listen(PORT, () => {
-  console.log(`🔄 Proxy server running on http://localhost:${PORT}`);
-  console.log(`🛡️  Ready to handle requests from web clients`);
+  console.log(`Proxy server running on port ${PORT}`);
 });
