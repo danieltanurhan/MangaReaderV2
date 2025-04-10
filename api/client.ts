@@ -1,147 +1,167 @@
+/**
+ * Central API client for all API requests
+ * Handles platform-specific routing (direct for native, proxy for web)
+ */
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { getItem, setItem, removeItem, StorageKeys } from '@/utils/storage';
 
-// Token storage keys
-const JWT_KEY = 'kavita_jwt_token';
-const API_KEY = 'kavita_api_key';
-const BASE_URL_KEY = 'kavita_base_url';
-
-// Create axios instance
+// Create axios instance for native API calls
 export const apiClient = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-  },
-  ...(Platform.OS === 'web' && {
-    // Add web-specific configuration for CORS
-    withCredentials: false,
-    headers: {
-      'Content-Type': 'application/json',
-      // Adds CORS headers that may help with simple requests
-      'Access-Control-Allow-Origin': '*',
-    }
-  })
+  }
 });
 
-// Add a request interceptor for web platform to handle CORS
-if (Platform.OS === 'web') {
-  apiClient.interceptors.request.use(
-    config => {
-      // Log requests in development for debugging
-      if (__DEV__) {
-        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
-      }
-      return config;
-    },
-    error => {
-      return Promise.reject(error);
-    }
-  );
-}
-
-// Storage adapter for cross-platform support
-const storage = {
-  async getItem(key: string): Promise<string | null> {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
-    } else {
-      return await SecureStore.getItemAsync(key);
-    }
-  },
-  
-  async setItem(key: string, value: string): Promise<void> {
-    if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
-    } else {
-      await SecureStore.setItemAsync(key, value);
-    }
-  },
-  
-  async removeItem(key: string): Promise<void> {
-    if (Platform.OS === 'web') {
-      localStorage.removeItem(key);
-    } else {
-      await SecureStore.deleteItemAsync(key);
-    }
-  }
-};
-
-// Get stored base URL
-export const getBaseUrl = async (): Promise<string | null> => {
-  return await storage.getItem(BASE_URL_KEY);
-};
-
-// Set base URL and configure axios instance
-export const setBaseUrl = async (url: string): Promise<void> => {
-  const baseUrl = url.endsWith('/') ? url : `${url}/`;
-  await storage.setItem(BASE_URL_KEY, baseUrl);
-  apiClient.defaults.baseURL = baseUrl;
-};
-
-// Get JWT token
-export const getToken = async (): Promise<string | null> => {
-  return await storage.getItem(JWT_KEY);
-};
-
-// Get API key
-export const getApiKey = async (): Promise<string | null> => {
-  return await storage.getItem(API_KEY);
-};
-
-// Set API key
-export const setApiKey = async (apiKey: string): Promise<void> => {
-  await storage.setItem(API_KEY, apiKey);
-};
-
-// Store auth tokens
-export const storeTokens = async (jwt: string, apiKey: string): Promise<void> => {
-  await storage.setItem(JWT_KEY, jwt);
-  await storage.setItem(API_KEY, apiKey);
-  
-  // Update axios headers
-  apiClient.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
-};
-
-// Clear auth tokens
-export const clearTokens = async (): Promise<void> => {
-  await storage.removeItem(JWT_KEY);
-  await storage.removeItem(API_KEY);
-  delete apiClient.defaults.headers.common['Authorization'];
-};
-
-// Function to refresh token
-export const refreshToken = async (): Promise<string | null> => {
-  try {
-    const apiKey = await getApiKey();
-    const baseUrl = await getBaseUrl();
-    
-    if (!apiKey || !baseUrl) {
-      return null;
-    }
-    
-    const response = await axios.post(
-      `${baseUrl}/api/Plugin/authenticate?apiKey=${apiKey}&pluginName=KavitaReader`
-    );
-    
-    if (response.data && response.data.token) {
-      await storage.setItem(JWT_KEY, response.data.token);
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-      return response.data.token;
-    }
-    
+/**
+ * Get the base URL for the proxy server (web platform only)
+ */
+const getProxyBaseUrl = (): string | null => {
+  // Only use proxy for web platform
+  if (Platform.OS !== 'web') {
     return null;
+  }
+  
+  // For development
+  if (__DEV__) {
+    return 'http://localhost:3031';
+  }
+  
+  // For production
+  return Constants.expoConfig?.extra?.proxyServerUrl || 'https://your-proxy-server.com';
+};
+
+/**
+ * Check if the proxy server is available (only relevant for web platform)
+ * @returns Promise<boolean> - true if proxy is available or if on native platform
+ */
+export const checkProxyAvailability = async (): Promise<boolean> => {
+  const proxyUrl = getProxyBaseUrl();
+  
+  // If not on web, no proxy is needed
+  if (!proxyUrl) return true;
+  
+  try {
+    const response = await fetch(`${proxyUrl}/health`, { 
+      method: 'GET'
+    });
+    
+    // Basic validation of response
+    return response.ok;
   } catch (error) {
-    console.error('Token refresh failed:', error);
-    return null;
+    console.warn('Proxy server not available:', error);
+    return false;
   }
 };
 
-// Initialize client with stored values
-(async () => {
+/**
+ * Make a platform-aware API request to the Kavita server
+ * - For web: Routes through proxy to avoid CORS issues
+ * - For native: Makes direct API calls
+ * 
+ * @param endpoint - The Kavita API endpoint (without leading slash)
+ * @param method - HTTP method (GET or POST)
+ * @param body - Request body (for POST requests)
+ * @param headers - Additional headers
+ * @returns Promise with the response data
+ */
+export const makeRequest = async (
+  endpoint: string,
+  method: 'GET' | 'POST' = 'GET',
+  body?: any,
+  headers: Record<string, string> = {}
+): Promise<any> => {
   try {
-    const baseUrl = await getBaseUrl();
-    const token = await getToken();
+    // Get auth info and server details
+    const token = await getItem(StorageKeys.JWT_TOKEN);
+    const apiKey = await getItem(StorageKeys.API_KEY);
+    const baseUrl = await getItem(StorageKeys.BASE_URL);
+    
+    if (!baseUrl) {
+      throw new Error('Server URL not configured');
+    }
+    
+    // === WEB PLATFORM: Use proxy ===
+    if (Platform.OS === 'web') {
+      const proxyUrl = getProxyBaseUrl();
+      
+      if (!proxyUrl) {
+        throw new Error('Proxy URL not configured for web platform');
+      }
+      
+      const url = `${proxyUrl}/api-proxy`;
+      
+      const requestHeaders = {
+        'Content-Type': 'application/json',
+        ...headers
+      };
+      
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Send request to our proxy with all necessary info
+      const response = await fetch(url, {
+        method: 'POST', // Always POST to proxy endpoint
+        headers: requestHeaders,
+        body: JSON.stringify({
+          target: endpoint,
+          method: method,
+          body: body || {},
+          kavitaApiKey: apiKey
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`API error: ${response.status} ${errorData.message || response.statusText}`);
+      }
+      
+      // Check if it's an image response
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('image')) {
+        return await response.blob();
+      }
+      
+      return await response.json();
+    }
+    
+    // === NATIVE PLATFORM: Direct API call ===
+    // Add authorization header if token exists
+    const requestHeaders = {
+      ...headers
+    };
+    
+    if (token) {
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (method === 'GET') {
+      const response = await apiClient.get(`${baseUrl}/api/${endpoint}`, { 
+        headers: requestHeaders 
+      });
+      return response.data;
+    } else {
+      const response = await apiClient.post(`${baseUrl}/api/${endpoint}`, body, { 
+        headers: requestHeaders 
+      });
+      return response.data;
+    }
+  } catch (error) {
+    console.error(`API request failed for ${endpoint}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Configure the API client with the base URL and authorization token
+ */
+export const configureApiClient = async (): Promise<void> => {
+  try {
+    const baseUrl = await getItem(StorageKeys.BASE_URL);
+    const token = await getItem(StorageKeys.JWT_TOKEN);
     
     if (baseUrl) {
       apiClient.defaults.baseURL = baseUrl;
@@ -151,6 +171,9 @@ export const refreshToken = async (): Promise<string | null> => {
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
   } catch (error) {
-    console.error('Failed to load stored credentials:', error);
+    console.error('Failed to configure API client:', error);
   }
-})();
+};
+
+// Initialize client when imported
+configureApiClient();

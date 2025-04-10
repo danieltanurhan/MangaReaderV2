@@ -1,13 +1,23 @@
-import { apiClient } from './client';
-import * as SecureStore from 'expo-secure-store';
+/**
+ * Authentication API functions
+ * Handles all authentication-related API calls
+ */
+import { apiClient, makeRequest, checkProxyAvailability } from './client';
+import { getItem, setItem, removeItem, StorageKeys } from '@/utils/storage';
+import { Platform } from 'react-native';
 
 export interface ServerInfo {
   name: string;
   version: string;
   isConnected: boolean;
+  url?: string;
+  apiKey?: string;
 }
 
-// Parse the ODPS URL to extract the base URL and API key
+/**
+ * Parse the ODPS URL to extract the base URL and API key
+ * @param odpsUrl The ODPS URL from the user
+ */
 export function parseOdpsUrl(odpsUrl: string): { baseUrl: string, apiKey: string } | null {
   try {
     // Ensure URL has a protocol
@@ -16,7 +26,7 @@ export function parseOdpsUrl(odpsUrl: string): { baseUrl: string, apiKey: string
     }
     
     const url = new URL(odpsUrl);
-    const protocol = 'https:';
+    const protocol = url.protocol;
     const hostname = url.hostname;
     const port = url.port ? `:${url.port}` : '';
     const baseUrl = `${protocol}//${hostname}${port}/kavita`;
@@ -39,24 +49,44 @@ export function parseOdpsUrl(odpsUrl: string): { baseUrl: string, apiKey: string
   }
 }
 
-// Function to authenticate with API key
+/**
+ * Authenticate with API key and get a JWT token
+ * @param baseUrl The Kavita server base URL
+ * @param apiKey The API key for authentication
+ */
 export async function refreshToken(baseUrl: string, apiKey: string): Promise<string | null> {
   try {
-    const response = await apiClient.post(
-      `${baseUrl}/api/Plugin/authenticate?apiKey=${apiKey}&pluginName=KavitaReader`
+    // For web platform, check proxy availability first
+    if (Platform.OS === 'web') {
+      const isProxyAvailable = await checkProxyAvailability();
+      if (!isProxyAvailable) {
+        console.error('Proxy server not available for authentication');
+        return null;
+      }
+    }
+    
+    // Use unified makeRequest for both platforms
+    const response = await makeRequest(
+      'Plugin/authenticate',
+      'POST',
+      null,
+      { 
+        'x-api-key': apiKey,
+        'kavita-api-key': apiKey
+      }
     );
     
-    if (response.data && response.data.token) {
-      // Save token to secure storage
-      await SecureStore.setItemAsync('kavita_jwt_token', response.data.token);
-      await SecureStore.setItemAsync('kavita_api_key', apiKey);
-      await SecureStore.setItemAsync('kavita_base_url', baseUrl);
+    if (response && response.token) {
+      // Store the authentication info using our unified storage adapter
+      await setItem(StorageKeys.JWT_TOKEN, response.token);
+      await setItem(StorageKeys.API_KEY, apiKey);
+      await setItem(StorageKeys.BASE_URL, baseUrl);
       
-      // Set token in API client
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      // Configure axios defaults for native requests
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
       apiClient.defaults.baseURL = baseUrl;
       
-      return response.data.token;
+      return response.token;
     }
     
     return null;
@@ -66,23 +96,28 @@ export async function refreshToken(baseUrl: string, apiKey: string): Promise<str
   }
 }
 
-// Get server info using token
+/**
+ * Get server information
+ * @param baseUrl The Kavita server base URL
+ * @param token The authentication token
+ */
 export async function getServerInfo(baseUrl: string, token: string): Promise<ServerInfo | null> {
   try {
-    const response = await apiClient.get(
-      `${baseUrl}/api/server/server-info`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
+    // Use unified makeRequest for both platforms
+    const response = await makeRequest(
+      'server/server-info',
+      'GET',
+      null,
+      { 'Authorization': `Bearer ${token}` }
     );
     
-    if (response.data) {
+    if (response) {
       return {
-        name: response.data.name || 'Kavita Server',
-        version: response.data.version || 'Unknown',
-        isConnected: true
+        name: response.name || 'Kavita Server',
+        version: response.version || 'Unknown',
+        isConnected: true,
+        url: baseUrl,
+        apiKey: token
       };
     }
     
@@ -93,7 +128,11 @@ export async function getServerInfo(baseUrl: string, token: string): Promise<Ser
   }
 }
 
-// Complete connection flow
+/**
+ * Complete connection flow for Kavita servers
+ * Parses ODPS URL, authenticates, and gets server info
+ * @param odpsUrl The ODPS URL from the user
+ */
 export async function connectToKavita(odpsUrl: string): Promise<{
   success: boolean;
   serverInfo?: ServerInfo;
@@ -142,5 +181,23 @@ export async function connectToKavita(odpsUrl: string): Promise<{
       success: false,
       error: error.message || 'Connection failed'
     };
+  }
+}
+
+/**
+ * Log out from the current Kavita server
+ */
+export async function logout(): Promise<void> {
+  try {
+    // Clear all stored credentials
+    await removeItem(StorageKeys.JWT_TOKEN);
+    await removeItem(StorageKeys.API_KEY);
+    await removeItem(StorageKeys.BASE_URL);
+    
+    // Clear axios defaults
+    delete apiClient.defaults.headers.common['Authorization'];
+    apiClient.defaults.baseURL = '';
+  } catch (error) {
+    console.error('Logout error:', error);
   }
 }

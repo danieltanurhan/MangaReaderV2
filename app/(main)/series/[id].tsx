@@ -1,29 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  StyleSheet, 
-  Image, 
-  ScrollView, 
-  View, 
-  ActivityIndicator, 
-  TouchableOpacity, 
-  FlatList,
-  Dimensions
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { ScrollView, StyleSheet, View, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useMangaStore } from '@/store/mangaStore';
-import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useThemeColor } from '@/hooks/useThemeColor';
-import { Volume } from '@/api/manga'; // Removed unused Chapter import
+import { ThemedText } from '@/components/ThemedText';
+import {Button} from '@/components/ui/Button';
+import MangaImage from '@/components/ui/MangaImage';
+import {IconSymbol} from '@/components/ui/IconSymbol';
+import {Colors} from '@/constants/Colors';
+import {useThemeColor} from '@/hooks/useThemeColor';
+import { Volume } from '@/api/manga';
 import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 
-export default function SeriesDetailScreen() {
-  const router = useRouter();
+export default function SeriesDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const seriesId = parseInt(id || '0', 10);
+  const seriesId = parseInt(id, 10);
+  const iconColor = useThemeColor({}, 'text');
+  const linkColor = useThemeColor({}, 'tint');
 
   const {
     currentSeries,
@@ -37,12 +32,6 @@ export default function SeriesDetailScreen() {
   } = useMangaStore();
 
   const [selectedVolumeId, setSelectedVolumeId] = useState<number | null>(null);
-
-  // Get theme colors
-  const textColor = useThemeColor({}, 'text');
-  const backgroundColor = useThemeColor({}, 'background');
-  const tintColor = useThemeColor({}, 'tint');
-  const iconColor = useThemeColor({}, 'icon');
 
   // Load series data on mount
   useEffect(() => {
@@ -187,16 +176,17 @@ export default function SeriesDetailScreen() {
       onPress={() => setSelectedVolumeId(item.id)}
     >
       <View style={styles.volumeImageContainer}>
-        <Image 
-          source={{ uri: getVolumeCoverUrl(item.id) }}
+        <MangaImage
+          source={item.id}
+          type="volume"
           style={styles.volumeImage}
-          resizeMode="cover"
+          cacheKey={`volume_${item.id}`}
         />
       </View>
       <ThemedText 
         style={[
           styles.volumeNumber, 
-          selectedVolumeId === item.id && { color: tintColor }
+          selectedVolumeId === item.id && { color: linkColor }
         ]}
       >
         {item.name || `Volume ${item.number}`}
@@ -241,7 +231,7 @@ export default function SeriesDetailScreen() {
                       <IconSymbol 
                         name="checkmark.circle.fill" 
                         size={16} 
-                        color={tintColor} 
+                        color={iconColor} 
                         style={styles.completedIcon}
                       />
                     )}
@@ -273,7 +263,7 @@ export default function SeriesDetailScreen() {
     if (isLoadingSeries) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={tintColor} />
+          <ActivityIndicator size="large" color={linkColor} />
           <ThemedText style={styles.loadingText}>Loading series details...</ThemedText>
         </View>
       );
@@ -299,17 +289,19 @@ export default function SeriesDetailScreen() {
       <>
         {/* Series Hero Section */}
         <View style={styles.heroContainer}>
-          <Image 
-            source={{ uri: getSeriesCoverUrl(seriesId) }}
+          <MangaImage
+            source={seriesId}
+            type="series"
             style={styles.coverImage}
-            resizeMode="cover"
+            cacheKey={`series_detail_${seriesId}`}
           />
           <BlurView intensity={100} style={styles.heroOverlay} />
           <View style={styles.heroContent}>
-            <Image 
-              source={{ uri: getSeriesCoverUrl(seriesId) }}
+            <MangaImage
+              source={seriesId}
+              type="series"
               style={styles.heroImage}
-              resizeMode="contain"
+              cacheKey={`series_detail_${seriesId}`}
             />
             <View style={styles.heroInfo}>
               <ThemedText type="title" style={styles.seriesTitle}>
@@ -332,7 +324,7 @@ export default function SeriesDetailScreen() {
                       styles.progressBar, 
                       { 
                         width: `${getReadingStatus().progress}%`,
-                        backgroundColor: tintColor,
+                        backgroundColor: linkColor,
                       }
                     ]} 
                   />
@@ -344,14 +336,17 @@ export default function SeriesDetailScreen() {
 
               {/* Continue Reading Button */}
               <TouchableOpacity 
-                style={[styles.continueButton, { backgroundColor: tintColor }]}
+                style={[styles.continueButton, { backgroundColor: linkColor }]}
                 onPress={() => {
                   const readingStatus = getReadingStatus();
                   
                   if (readingStatus.hasUnread) {
-                    handleReadChapter(readingStatus.firstUnreadChapterId);
+                    handleReadChapter(readingStatus.firstUnreadChapterId || 0);
                   } else if (readingStatus.firstChapterId) {
                     handleReadChapter(readingStatus.firstChapterId);
+                  } else {
+                    handleReadChapter(readingStatus.firstChapterId || 0);
+                    console.log('No unread chapters available.');
                   }
                 }}
               >
@@ -381,14 +376,44 @@ export default function SeriesDetailScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Volumes
             </ThemedText>
-            <FlatList
-              data={currentVolumes}
-              renderItem={renderVolumeItem}
-              keyExtractor={(item) => item?.id ? item.id.toString() : `volume-${Math.random()}`}
-              horizontal
+            <ScrollView 
+              horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.volumeList}
-            />
+              contentContainerStyle={styles.volumesList}
+            >
+              {currentVolumes.map(volume => (
+                <TouchableOpacity 
+                  key={volume.id}
+                  style={styles.volumeItem}
+                  onPress={() => setSelectedVolumeId(volume.id)}
+                >
+                  <MangaImage
+                    source={volume.id}
+                    type="volume"
+                    style={styles.volumeCover}
+                    cacheKey={`volume_${volume.id}`}
+                  />
+                  <ThemedText style={styles.volumeNumber}>
+                    Vol. {volume.number}
+                  </ThemedText>
+                  {volume.pages > 0 && (
+                    <View style={styles.volumeProgressContainer}>
+                      <View 
+                        style={[
+                          styles.volumeProgressBar, 
+                          { 
+                            width: `${Math.round((volume.pagesRead / volume.pages) * 100)}%`,
+                            backgroundColor: volume.pagesRead === volume.pages 
+                              ? iconColor
+                              : linkColor, 
+                          }
+                        ]} 
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
 
@@ -405,6 +430,14 @@ export default function SeriesDetailScreen() {
           title: currentSeries?.name || 'Series Details',
           headerTitleStyle: { fontSize: 16 },
           headerBackTitle: 'Library',
+          headerRight: () => (
+            <TouchableOpacity 
+              onPress={() => fetchSeriesById(seriesId)}
+              style={styles.refreshButton}
+            >
+              <IconSymbol name="arrow.counterclockwise" size={22} color={iconColor} />
+            </TouchableOpacity>
+          ),
         }} 
       />
 
@@ -542,7 +575,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   // Volume list styles
-  volumeList: {
+  volumesList: {
     paddingVertical: 8,
   },
   volumeItem: {
@@ -567,6 +600,24 @@ const styles = StyleSheet.create({
   volumeNumber: {
     textAlign: 'center',
     fontSize: 14,
+  },
+  volumeCover: {
+    width: 100,
+    height: 150,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  volumeProgressContainer: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  volumeProgressBar: {
+    height: '100%',
+    borderRadius: 2,
   },
   // Chapter list styles
   chaptersContainer: {
@@ -629,5 +680,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     fontSize: 12,
     overflow: 'hidden',
+  },
+  refreshButton: {
+    marginRight: 16,
   },
 });

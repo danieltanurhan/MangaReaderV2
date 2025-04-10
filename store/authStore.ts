@@ -1,139 +1,150 @@
+/**
+ * Authentication state management using Zustand
+ * Handles authentication state and server connection status
+ */
 import { create } from 'zustand';
-import { parseOdpsUrl } from '@/api/auth';
-import { connectToKavita, refreshToken, ServerInfo } from '@/api/auth';
+import { connectToKavita, ServerInfo, logout } from '@/api/auth';
+import { getItem, StorageKeys } from '@/utils/storage';
 
-interface AuthStoreState {
-  isLoading: boolean;
-  isConnected: boolean;
+/**
+ * Authentication state interface
+ */
+interface AuthState {
+  // State properties
   isAuthenticated: boolean;
   serverInfo: ServerInfo | null;
   token: string | null;
   apiKey: string | null;
   baseUrl: string | null;
+  isLoading: boolean;
   error: string | null;
   
   // Actions
   connectWithOdpsUrl: (odpsUrl: string) => Promise<boolean>;
+  disconnectServer: () => Promise<void>;
   checkAuthentication: () => Promise<boolean>;
-  logout: () => Promise<void>;
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthStoreState>((set, get) => ({
-  isLoading: false,
-  isConnected: false,
+/**
+ * Authentication store using Zustand
+ * Manages authentication state and exposes actions for login/logout
+ */
+export const useAuthStore = create<AuthState>((set, get) => ({
+  // Initial state
   isAuthenticated: false,
   serverInfo: null,
   token: null,
   apiKey: null,
   baseUrl: null,
+  isLoading: false,
   error: null,
   
-  connectWithOdpsUrl: async (odpsUrl) => {
+  /**
+   * Connect to Kavita server with ODPS URL
+   * @param odpsUrl The ODPS URL from the user
+   */
+  connectWithOdpsUrl: async (odpsUrl: string) => {
+    // Start loading state
     set({ isLoading: true, error: null });
     
     try {
-      // Parse the ODPS URL
-      const parsed = parseOdpsUrl(odpsUrl);
-      if (!parsed) {
-        set({
-          isLoading: false,
-          error: 'Invalid ODPS URL format. Please check your URL.'
-        });
-        return false;
-      }
-      
-      // Connect to Kavita with the parsed URL
+      // Use the auth module's connection function
       const result = await connectToKavita(odpsUrl);
       
       if (result.success && result.serverInfo && result.token) {
+        // Set successful connection state
         set({
-          isLoading: false,
-          isConnected: true,
           isAuthenticated: true,
           serverInfo: result.serverInfo,
           token: result.token,
-          apiKey: result.apiKey || null,
-          baseUrl: result.baseUrl || null
+          apiKey: result.apiKey,
+          baseUrl: result.baseUrl,
+          isLoading: false,
+          error: null
         });
         return true;
       } else {
+        // Set error state
         set({
-          isLoading: false,
-          error: result.error || 'Failed to connect'
+          isAuthenticated: false,
+          error: result.error || 'Connection failed',
+          isLoading: false
         });
         return false;
       }
     } catch (error: any) {
+      // Handle unexpected errors
       set({
-        isLoading: false,
-        error: error.message || 'An unknown error occurred'
-      });
-      return false;
-    }
-  },
-  
-  checkAuthentication: async () => {
-    set({ isLoading: true });
-    
-    try {
-      const { apiKey, baseUrl } = get();
-      
-      if (!apiKey || !baseUrl) {
-        set({
-          isLoading: false,
-          isAuthenticated: false,
-        });
-        return false;
-      }
-      
-      const token = await refreshToken(baseUrl, apiKey);
-      
-      if (token) {
-        set({
-          isLoading: false,
-          isAuthenticated: true,
-          token
-        });
-        return true;
-      } else {
-        set({
-          isLoading: false,
-          isAuthenticated: false,
-          token: null
-        });
-        return false;
-      }
-    } catch (error) {
-      set({
-        isLoading: false,
         isAuthenticated: false,
-        token: null
+        error: error.message || 'Connection failed',
+        isLoading: false
       });
       return false;
     }
   },
   
-  logout: async () => {
-    set({ isLoading: true });
-    
+  /**
+   * Disconnect from the server and clear authentication
+   */
+  disconnectServer: async () => {
     try {
-      // Clear all authentication data
+      // Use the auth module's logout function
+      await logout();
+      
+      // Clear authentication state
       set({
-        isLoading: false,
-        isConnected: false,
+        isAuthenticated: false,
+        serverInfo: null,
+        token: null,
+        apiKey: null,
+        baseUrl: null,
+        error: null
+      });
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      // Still clear state even if API logout fails
+      set({
         isAuthenticated: false,
         serverInfo: null,
         token: null,
         apiKey: null,
         baseUrl: null
       });
-    } catch (error) {
-      set({ isLoading: false });
-      console.error('Logout error:', error);
     }
   },
   
+  /**
+   * Check if we have valid authentication stored
+   */
+  checkAuthentication: async () => {
+    try {
+      // Check for stored tokens using the storage module
+      const token = await getItem(StorageKeys.JWT_TOKEN);
+      const apiKey = await getItem(StorageKeys.API_KEY);
+      const baseUrl = await getItem(StorageKeys.BASE_URL);
+      
+      if (token && apiKey && baseUrl) {
+        // Update state with stored credentials
+        set({
+          isAuthenticated: true,
+          token,
+          apiKey,
+          baseUrl
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * Clear any error messages in the state
+   */
   clearError: () => {
     set({ error: null });
   }

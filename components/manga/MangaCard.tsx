@@ -1,120 +1,116 @@
 import React from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
+import { router } from 'expo-router';
+import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
+import MangaImage from '@/components/ui/MangaImage';
+import { MangaSeries } from '@/api/manga';
+import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 interface MangaCardProps {
-  id: string;
-  title: string;
-  coverUrl: string;
-  unreadCount?: number;
-  onPress?: () => void;
+  series: MangaSeries;
 }
 
-// Calculate width based on screen size (2 columns with padding)
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 36) / 2; // 2 columns with 12px padding on sides and 12px between cards
-const CARD_HEIGHT = CARD_WIDTH * 1.5; // 2:3 aspect ratio common for manga covers
+const cardWidth = (width - 48) / 3; // 3 columns with 16px spacing
 
-export function MangaCard({ id, title, coverUrl, unreadCount, onPress }: MangaCardProps) {
-  const router = useRouter();
-  const cardBgColor = useThemeColor({}, 'background');
-  const shadowColor = useThemeColor({}, 'text');
+export default function MangaCard({ series }: MangaCardProps) {
+    const iconColor = useThemeColor({}, 'text');
+    const linkColor = useThemeColor({}, 'tint');
+  
   
   const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else {
-      // Update the navigation route to match the new location
-      router.push(`/(main)/series/${id}`);
-    }
+    router.push(`/series/${series.id}`);
   };
   
+  // Calculate read percentage
+  const readPercentage = series.pages > 0 
+    ? Math.round((series.pagesRead / series.pages) * 100) 
+    : 0;
+  
   return (
-    <TouchableOpacity 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: cardBgColor,
-          shadowColor: shadowColor,
-        }
-      ]}
-      activeOpacity={0.8}
+    <TouchableOpacity
+      style={styles.container}
       onPress={handlePress}
+      activeOpacity={0.7}
     >
       <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: coverUrl }} 
-          style={styles.image}
-          resizeMode="cover"
+        {/* Replace standard Image with MangaImage component */}
+        <MangaImage
+          source={series.id}
+          type="series"
+          style={styles.coverImage}
+          cacheKey={`series_card_${series.id}`}
         />
-        {unreadCount !== undefined && unreadCount > 0 && (
-          <View style={styles.badgeContainer}>
-            <View style={styles.badge}>
-              <ThemedText style={styles.badgeText}>{unreadCount}</ThemedText>
-            </View>
+        
+        {/* Progress indicator */}
+        {readPercentage > 0 && (
+          <View style={styles.progressContainer}>
+            <View 
+              style={[
+                styles.progressBar, 
+                { 
+                  width: `${readPercentage}%`,
+                  backgroundColor: readPercentage === 100 
+                    ? iconColor 
+                    : linkColor
+                }
+              ]} 
+            />
           </View>
         )}
       </View>
-      <View style={styles.titleContainer}>
+      
+      <ThemedView style={styles.titleContainer}>
         <ThemedText 
+          style={styles.title} 
           numberOfLines={2} 
-          style={styles.title}
+          lightColor="#000" 
+          darkColor="#fff"
         >
-          {title}
+          {series.name}
         </ThemedText>
-      </View>
+      </ThemedView>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: CARD_WIDTH,
+    width: cardWidth,
     marginBottom: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   imageContainer: {
     position: 'relative',
-    width: '100%',
-    height: CARD_HEIGHT,
-    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    overflow: 'hidden',
+    aspectRatio: 2/3,
   },
-  image: {
+  coverImage: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  badgeContainer: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  badge: {
-    backgroundColor: '#e11d48',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 12,
-    minWidth: 24,
-    alignItems: 'center',
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    borderRadius: 8,
   },
   titleContainer: {
-    padding: 12,
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 4,
   },
   title: {
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'center',
   },
+  progressContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  progressBar: {
+    height: '100%',
+  }
 });

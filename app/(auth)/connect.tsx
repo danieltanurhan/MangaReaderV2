@@ -125,6 +125,12 @@ export default function ConnectScreen() {
               fullWidth
             />
             
+            {Platform.OS === 'web' && (
+              <ThemedText style={styles.proxyNote}>
+                Note: Web connections require the proxy server to be running.
+              </ThemedText>
+            )}
+            
             {serverInfo && (
               <ThemedView style={styles.serverInfo}>
                 <ThemedText type="defaultSemiBold">Connected to:</ThemedText>
@@ -175,6 +181,12 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#e11d48',
     marginBottom: 16,
+  },
+  proxyNote: {
+    marginTop: 12,
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.7,
   },
   serverInfo: {
     marginTop: 24,

@@ -36,6 +36,14 @@ export default function MainLayout() {
           presentation: 'push' 
         }} 
       />
+      <Stack.Screen 
+        name="(main)/reader/[chapterId]" 
+        options={{ 
+          headerShown: false,  // Hide header for immersive reading experience
+          presentation: 'fullScreenModal',  // Use full screen for reader
+          animation: 'slide_from_right'
+        }} 
+      />
     </Stack>
   );
 }

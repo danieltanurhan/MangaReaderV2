@@ -15,7 +15,7 @@ This is an Expo Router project with a file-based routing system, implementing a 
 - Connection to Kavita servers via ODPS URL
 - JWT authentication with secure token storage
 - Cross-platform storage with SecureStore/localStorage
-- Axios client for API requests
+- Platform-aware API client that handles CORS issues for web
 
 ### State Management
 - Zustand stores for global state
@@ -56,6 +56,12 @@ This is an Expo Router project with a file-based routing system, implementing a 
 - `Button` and `Input` components with theming support
 - Basic navigation structure
 
+### Cross-Platform API Architecture
+- Unified storage adapter in `utils/storage.ts`
+- Platform-aware API client with proxy support for web
+- Centralized authentication logic in `api/auth.ts`
+- Clean separation of concerns across all modules
+
 ## Pending Features
 
 ### Reader Experience
@@ -74,4 +80,43 @@ This is an Expo Router project with a file-based routing system, implementing a 
 ## Technical Considerations
 
 ### Cross-Platform Support
-- Platform-specific code for iOS, Android, and web
+- Platform-specific handling for iOS, Android, and web
+- Web proxy server to bypass CORS restrictions
+- Native direct API access for better performance
+- Unified image loading across platforms
+
+## API Architecture
+
+### Simplified API Structure
+1. `utils/storage.ts`
+   - Cross-platform storage adapter (SecureStore/localStorage)
+   - Central location for storage keys
+   - Consistent async interface
+
+2. `api/client.ts`
+   - Platform-aware request function `makeRequest`
+   - Proxy routing for web requests
+   - Direct API calls for native platforms
+   - Health check for proxy availability
+
+3. `api/auth.ts`
+   - Authentication-specific logic
+   - ODPS URL parsing
+   - Token management
+   - Server connection flow
+
+4. `api/manga.ts`
+   - Manga-specific API functions
+   - Uses unified request method
+   - No platform-specific code
+
+5. `store/authStore.ts` & `store/mangaStore.ts`
+   - Clean state management
+   - Delegate API calls to respective modules
+   - No direct platform detection
+
+### Image Handling
+- Platform-aware image URL generation
+- Proxy support for web image loading
+- Direct URLs for native platforms
+- Consistent interface for all components
