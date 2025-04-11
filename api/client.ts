@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { getItem, setItem, removeItem, StorageKeys } from '@/utils/storage';
-import { processImageResponse } from '@/utils/imageUtils';
+// import { processImageResponse } from '@/utils/imageUtils';
 
 
 // Create axios instance for native API calls
@@ -128,26 +128,26 @@ export const makeRequest = async (
         // For image endpoints, we need special handling
         const isImageEndpoint = endpoint.includes('/image') || 
                               endpoint.includes('/cover') ||
-                              endpoint.includes('series-cover');
+                              endpoint.includes('series-cover') ||
+                              endpoint.includes('volume-cover') ||
+                              endpoint.includes('chapter-cover');
         
         if (isImageEndpoint) {
+          console.log('Image endpoint detected, using raw response');
           // For images, we need the raw response (not parsed JSON)
           const response = await axios({
             method: 'POST',
             url: url,
             headers: requestHeaders,
+            responseType: 'arraybuffer',
             data: {
               target: endpoint,
               method: 'GET', // Images are always GET
               params: params || {}
-            },
-            responseType: 'arraybuffer' // Get raw binary data
+            }
           });
-          
-          // Process the image data
-          const contentType = response.headers?.['content-type'] || 'image/png';
-          const imageSource = processImageResponse(response.data, contentType);
-          return imageSource;
+
+          return response.data;
         } else {
           // Regular JSON endpoint
           const response = await axios({
@@ -182,12 +182,12 @@ export const makeRequest = async (
     }
     
     if (method === 'GET') {
-      const response = await apiClient.get(`${baseUrl}/api/${endpoint}`, { 
+      const response = await apiClient.get(`${baseUrl}/api/${fullEndpoint}`, { 
         headers: requestHeaders 
       });
       return response.data;
     } else {
-      const response = await apiClient.post(`${baseUrl}/api/${endpoint}`, body, { 
+      const response = await apiClient.post(`${baseUrl}/api/${fullEndpoint}`, body, { 
         headers: requestHeaders 
       });
       return response.data;

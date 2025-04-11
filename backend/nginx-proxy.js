@@ -10,7 +10,7 @@ const app = express();
 app.use(cors({
   origin: ['http://localhost:8081', 'https://your-production-url.com'],
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'kavita-api-key'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json());
@@ -30,11 +30,6 @@ app.post('/api-proxy', async (req, res) => {
   try {
     console.log('Received request:', req.body);
     const { target, method, body, params } = req.body;
-    
-
-    if (!target) {
-      return res.status(400).json({ message: 'Missing required parameters' });
-    }
     
     // Extract auth from request headers
     const headers = {
@@ -72,24 +67,47 @@ app.post('/api-proxy', async (req, res) => {
       }
     }
 
-    if (target.includes('/image/') || target.includes('/cover/')) {
-      // Set the response type to arraybuffer for binary data
-      const response = await axios({
-        method: 'GET',
-        url: url,
-        headers: headers,
-        responseType: 'arraybuffer'  // Important for binary data
+    try {
+    // Check if target is a string and contains image or cover paths
+    if (typeof target === 'string' && (
+      target.includes('/image/') || 
+      target.includes('/cover/') ||
+      target.startsWith('image/') ||
+      target.startsWith('cover/')
+  )) {
+    // Set the response type to arraybuffer for binary data
+    const response = await axios({
+      method: 'GET',
+      url: url,
+      headers: headers,
+      responseType: 'arraybuffer'
+    });
+    console.log('Proxy response headers:', response.headers);
+    
+    res.set({
+      'Content-Type': response.headers['content-type'] || 'image/png',
+      'Content-Length': response.data.length,
+      'Cache-Control': response.headers['cache-control'] || 'public, max-age=60',
+      'ETag': response.headers['etag'],
+      'Last-Modified': response.headers['last-modified']
+  });
+
+    // Send the raw binary data
+    return res.send(response.data);
+  }
+  } catch (imageError) {
+      console.error('Image proxy error:', imageError);
+      return res.status(500).json({
+          message: 'Failed to proxy image',
+          details: imageError.message
       });
-      
-      // Set the content-type from the original response
-      res.set('Content-Type', response.headers['content-type']);
-      // Send the raw binary data
-      return res.send(response.data);
-    }
+  }
+
     
     // Make the request to the actual API
     let response;
     if (method === 'GET') {
+      console.log('In GET block');
       response = await axios({
         method: 'GET',
         url: url,

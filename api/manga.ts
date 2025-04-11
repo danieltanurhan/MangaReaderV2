@@ -173,24 +173,39 @@ export const updateReadingProgress = async (
 };
 
 /**
- * Get a cover image URL for a series
+ * Get the cover image URL for a series
+ * @param seriesId The series ID
+ * @returns A usable image source (URL string or Blob)
  */
-export const getSeriesCoverImageUrl = async (seriesId: number): Promise<ImageSource> => {
+export async function getSeriesCoverImageUrl(seriesId: number): Promise<any> {
   try {
-    const baseUrl = await getItem(StorageKeys.BASE_URL);
+    // Get API key for image endpoints
     const apiKey = await getItem(StorageKeys.API_KEY);
-   
-    const base = `${baseUrl}/api/`;
-    const endpoint = `image/series-cover?seriesId=${seriesId}&apiKey=${apiKey}`;
-     // For native platforms, return a direct URL
     if (Platform.OS !== 'web') {
-      return base + endpoint;
+      console.log('Native platform detected, using direct URL for series cover image');
+      return await getDirectImageUrl('image/series-cover', { seriesId });
     }
     
-    // For web platform, use makeRequest to get binary data through proxy
-    return await makeRequest(endpoint, 'GET');
+    
+    if (!apiKey) {
+      throw new Error('API key not available');
+    }
+    
+    // Use the makeRequest function, which now handles images
+    const imageSource = await makeRequest(
+      'image/series-cover',
+      'GET',
+      null,
+      {},
+      {
+        seriesId, 
+        apiKey
+      }
+    );
+    
+    return imageSource;
   } catch (error) {
-    console.error(`Error fetching cover image for series ${seriesId}:`, error);
+    console.error(`Error getting series cover for ${seriesId}:`, error);
     return null;
   }
 };
@@ -202,15 +217,16 @@ export const getSeriesCoverImageUrl = async (seriesId: number): Promise<ImageSou
  * @param volumeId - The volume ID
  * @returns Promise with image source (URL string for native, Blob for web)
  */
-export const getVolumeCoverImageUrl = async (volumeId: number): Promise<ImageSource> => {
+export const getVolumeCoverImageUrl = async (volumeId: number): Promise<any> => {
   try {
+    const apiKey = await getItem(StorageKeys.API_KEY);
     // For native platforms, return a direct URL
     if (Platform.OS !== 'web') {
       return await getDirectImageUrl('image/volume-cover', { volumeId });
     }
     
     // For web platform, use makeRequest to get binary data through proxy
-    return await makeRequest(`Image/volume-cover?volumeId=${volumeId}`, 'GET');
+    return await makeRequest(`image/volume-cover`, 'GET', null, {}, { volumeId, apiKey });
   } catch (error) {
     console.error(`Error fetching cover image for volume ${volumeId}:`, error);
     return null;
@@ -224,15 +240,16 @@ export const getVolumeCoverImageUrl = async (volumeId: number): Promise<ImageSou
  * @param chapterId - The chapter ID
  * @returns Promise with image source (URL string for native, Blob for web)
  */
-export const getChapterCoverImageUrl = async (chapterId: number): Promise<ImageSource> => {
+export const getChapterCoverImageUrl = async (chapterId: number): Promise<any> => {
   try {
+    const apiKey = await getItem(StorageKeys.API_KEY);
     // For native platforms, return a direct URL
     if (Platform.OS !== 'web') {
       return await getDirectImageUrl('image/chapter-cover', { chapterId });
     }
     
     // For web platform, use makeRequest to get binary data through proxy
-    return await makeRequest(`Image/chapter-cover?chapterId=${chapterId}`, 'GET');
+    return await makeRequest(`image/chapter-cover`, 'GET', null, {}, { chapterId, apiKey });
   } catch (error) {
     console.error(`Error fetching cover image for chapter ${chapterId}:`, error);
     return null;
@@ -247,7 +264,7 @@ export const getChapterCoverImageUrl = async (chapterId: number): Promise<ImageS
  * @param pageNumber - The page number (zero-based index)
  * @returns Promise with image source (URL string for native, Blob for web)
  */
-export const getPageImageUrl = async (chapterId: number, pageNumber: number): Promise<ImageSource> => {
+export const getPageImageUrl = async (chapterId: number, pageNumber: number): Promise<ImageSource | null | string> => {
   try {
     // For native platforms, return a direct URL
     if (Platform.OS !== 'web') {

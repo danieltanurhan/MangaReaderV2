@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, ImageProps, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { Image, ImageProps, ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import { useMangaStore } from '@/store/mangaStore';
 import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -37,8 +37,12 @@ export default function MangaImage({
     getChapterCoverUrl 
   } = useMangaStore();
 
+  console.log('MangaImage component mounted with source:', source, 'and type:', type);
+  console.log('Cache key:', cacheKey);
+
   useEffect(() => {
     let mounted = true;
+    let objectUrl: string | null = null;
     setIsLoading(true);
     setError(false);
 
@@ -48,6 +52,7 @@ export default function MangaImage({
 
         // Direct URL string
         if (typeof source === 'string') {
+          console.log('Source is a string:', source);
           finalImageUrl = source;
         } 
         // ID number (series, volume, chapter)
@@ -64,6 +69,7 @@ export default function MangaImage({
               break;
           }
         }
+
 
         if (mounted) {
           setImageUrl(finalImageUrl);
@@ -82,6 +88,7 @@ export default function MangaImage({
 
     return () => {
       mounted = false;
+      
     };
   }, [source, type, cacheKey]);
 

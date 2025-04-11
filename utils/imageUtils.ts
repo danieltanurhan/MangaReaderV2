@@ -4,89 +4,58 @@
  */
 import { Platform, ImageSourcePropType } from 'react-native';
 import { getItem, StorageKeys } from './storage';
+import * as FileSystem from 'expo-file-system';
 
-// Cache to store object URLs for web platform to avoid memory leaks
-const objectUrlCache: Map<string, string> = new Map();
-
-/**
- * Create an image URL from binary data (for web platform)
- * @param blob - Binary image data
- * @param cacheKey - Key to use for caching the URL (e.g., 'series-123')
- * @returns URL string for the image
- */
-export const createImageUrl = (blob: Blob, cacheKey: string): string => {
-  if (Platform.OS !== 'web') {
-    console.warn('createImageUrl is only intended for web platform');
-    return '';
-  }
-  
-  // Clean up existing URL if one exists for this key
-  if (objectUrlCache.has(cacheKey)) {
-    URL.revokeObjectURL(objectUrlCache.get(cacheKey)!);
-  }
-  
-  // Create new object URL and cache it
-  const url = URL.createObjectURL(blob);
-  objectUrlCache.set(cacheKey, url);
-  
-  return url;
-};
 
 /**
- * Clean up a specific object URL to prevent memory leaks
- * @param cacheKey - The key used when creating the URL
+ * Converts image data to a React Native-compatible URI, with platform-specific optimizations.
+ * - Web: Uses Base64 for reliability (Blobs can leak memory).
+ * - Native: Saves to filesystem for persistent caching.
  */
-export const revokeImageUrl = (cacheKey: string): void => {
-  if (Platform.OS !== 'web' || !objectUrlCache.has(cacheKey)) {
-    return;
-  }
-  
-  URL.revokeObjectURL(objectUrlCache.get(cacheKey)!);
-  objectUrlCache.delete(cacheKey);
-};
-
-/**
- * Clean up all created object URLs (call on app unmount/logout)
- */
-export const clearAllImageUrls = (): void => {
-  if (Platform.OS !== 'web') {
-    return;
-  }
-  
-  objectUrlCache.forEach(url => {
-    URL.revokeObjectURL(url);
-  });
-  
-  objectUrlCache.clear();
-};
-
-/**
- * Convert various image source types to a format usable by React Native Image component
- * @param source - The image source (URL string, Blob, or undefined)
- * @param cacheKey - Key to use for caching if it's a Blob
- * @returns Image source object for React Native Image component
- */
-export const getImageSource = (
-  source: string | Blob | undefined,
+export async function getImageSource(
+  imageData: string | ArrayBuffer | Uint8Array | null,
   cacheKey: string
-): ImageSourcePropType | null => {
-  if (!source) {
-    return null;
+): Promise<{ uri: string } | null> {
+  if (!imageData) return null;
+  console.log('Received imageData type:', typeof imageData);
+  console.log('First 10 chars/bytes:', imageData?.toString().substring(0, 10));
+
+
+  // Case 1: Already a URL (web or native)
+  if (typeof imageData === 'string' && imageData.startsWith('http')) {
+    console.log('Image data is a URL:', imageData);
+    return { uri: imageData };
   }
   
-  // Handle blob data (web platform)
-  if (Platform.OS === 'web' && typeof source !== 'string') {
-    const url = createImageUrl(source as Blob, cacheKey);
-    return { uri: url };
+  // Platform-specific base64 conversion
+  let base64Data: string;
+  let binaryData = imageData instanceof ArrayBuffer ? new Uint8Array(imageData) : imageData;
+  
+ // Handle binary data (web)
+ if (imageData instanceof ArrayBuffer || 
+  imageData instanceof Uint8Array) {
+    console.log('inside binary data conversion');
+    // Web-safe approach for converting binary to base64
+    binaryData = imageData instanceof ArrayBuffer ? new Uint8Array(imageData) : imageData;
+    const base64 = Array.from(binaryData)
+    .map(byte => String.fromCharCode(byte))
+    .join('');
+    base64Data = base64;
+  } else {
+    // Native platforms can use Buffer
+    base64Data = require('buffer').Buffer.from(binaryData).toString('base64');
   }
   
-  // Handle URL string (all platforms)
-  if (typeof source === 'string') {
-    return { uri: source };
+  const dataUri = `data:image/png;base64,${btoa(base64Data)}`;
+
+  if (Platform.OS === 'web') {
+    // Web: Use Base64 directly (more reliable than Blobs)
+    return { uri: dataUri };
+  } else {
+    // Native: Same approach for now, filesystem caching can be added later
+    return { uri: dataUri };
   }
-  
-  return null;
-};
+}
 
 /**
  * Generate a direct URL to an image on the Kavita server
@@ -125,4 +94,66 @@ export const getDirectImageUrl = async (
   }
 };
 
-export type ImageSource = string | Blob | null;
+export type ImageSource = 
+  | ArrayBuffer           // Raw binary data
+  | Uint8Array;
+
+
+/**
+ * Handles image data returned from API calls, converting to appropriate format
+ * - Web: Converts ArrayBuffer to base64 data URI
+ * - Native: Returns the URL directly
+ * 
+ * @param imageData The image data from the API (ArrayBuffer, or URL)
+ * @param mimeType Optional MIME type for the image (defaults to 'image/png')
+ * @returns An object with URI that can be used in Image source
+ */
+// export function processImageResponse(
+//   imageData: ImageSource | null,
+//   mimeType: string = 'image/png'
+// ): { uri: string } | null {
+//   if (!imageData) {
+//     console.warn('No image data received');
+//     return null;
+//   }
+
+  
+
+//   // Helper: Convert ArrayBuffer/Uint8Array to Base64
+//   const toBase64 = (buffer: ArrayBuffer | Uint8Array): string => {
+//     const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  
+//     if (Platform.OS === 'web') {
+//       // Use TextDecoder for better performance
+//       const binaryString = new TextDecoder('utf-8').decode(bytes);
+//       return window.btoa(binaryString);
+//     }
+  
+//     return Buffer.from(bytes).toString('base64');
+//   };
+
+//   // Case 1: Already a URL string
+//   if (typeof imageData === 'string') {
+//     console.log('Image data is a URL:', imageData);
+//     return { uri: imageData };  // Simplified since both cases return the same thing
+// }
+
+//   // Case 2: Raw binary data (ArrayBuffer, Uint8Array, or number[])
+//   if (imageData instanceof ArrayBuffer || imageData instanceof Uint8Array) {
+//     const contentType = mimeType;
+//     console.log('Image data type:', typeof imageData, 'Content type:', contentType);
+//     console.log('Image data:', toBase64(imageData));
+//     return { uri: `data:${contentType};base64,${toBase64(imageData)}` };
+//   }
+
+//   // Case 3: Number array (legacy format)
+//   if (Array.isArray(imageData) && imageData.every(i => typeof i === 'number')) {
+//     return { uri: `data:${mimeType};base64,${toBase64(new Uint8Array(imageData))}` };
+//   }
+
+//   console.warn(`Unsupported image format for ${Platform.OS}:`, typeof imageData);
+//   return null;
+// }
+
+// Object to track all created object URLs so we can revoke them when needed
+

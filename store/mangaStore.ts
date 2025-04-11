@@ -32,9 +32,9 @@ interface MangaStoreState {
   // Actions
   fetchAllSeries: () => Promise<void>;
   fetchSeriesById: (seriesId: number) => Promise<SeriesDetail | null>;
-  getSeriesCoverUrl: (seriesId: number) => Promise<string>;
-  getVolumeCoverUrl: (volumeId: number) => Promise<string>;
-  getChapterCoverUrl: (chapterId: number) => Promise<string>;
+  getSeriesCoverUrl: (seriesId: number) => Promise<string | null>;
+  getVolumeCoverUrl: (volumeId: number) => Promise<string | null>;
+  getChapterCoverUrl: (chapterId: number) => Promise<string | null>;
   clearCache: () => void;
   clearError: () => void;
 }
@@ -104,39 +104,39 @@ export const useMangaStore = create<MangaStoreState>((set, get) => ({
    * @param seriesId - The series ID
    * @returns Promise with URL string for the image
    */
-  getSeriesCoverUrl: async (seriesId: number): Promise<string> => {
+  getSeriesCoverUrl: async (seriesId: number): Promise<string | null> => {
     try {
       // Check cache first
       const cacheKey = `series_${seriesId}`;
       const cachedImage = imageCache[cacheKey];
       
-      if (cachedImage && Date.now() - cachedImage.timestamp < CACHE_EXPIRY) {
-        return cachedImage.url;
-      }
+      // if (cachedImage && Date.now() - cachedImage.timestamp < CACHE_EXPIRY) {
+      //   return cachedImage.url;
+      // }
       
       // Get image source from API (will be URL for native, Blob for web)
       const imageSource = await getSeriesCoverImageUrl(seriesId);
       
       if (!imageSource) {
-        return '';
+        return null
       }
       
-      // Convert to usable URL
-      const imageSourceObj = getImageSource(imageSource, cacheKey);
-      if (!imageSourceObj || !imageSourceObj.uri) {
-        return '';
+      // // Convert to usable URL
+      const imageSourceObj = await getImageSource(imageSource, cacheKey);
+      if (!imageSourceObj || !imageSourceObj) {
+        return null
       }
       
-      // Cache the result
-      imageCache[cacheKey] = { 
-        url: imageSourceObj.uri, 
-        timestamp: Date.now() 
-      };
+      // // Cache the result
+      // imageCache[cacheKey] = { 
+      //   url: imageSource.uri, 
+      //   timestamp: Date.now() 
+      // };
       
       return imageSourceObj.uri;
     } catch (error) {
-      console.error(`Error getting series cover URL for ${seriesId}:`, error);
-      return '';
+      console.error(` for ${seriesId}:`, error);
+      return null;
     }
   },
   
@@ -146,39 +146,39 @@ export const useMangaStore = create<MangaStoreState>((set, get) => ({
    * @param volumeId - The volume ID
    * @returns Promise with URL string for the image
    */
-  getVolumeCoverUrl: async (volumeId: number): Promise<string> => {
+  getVolumeCoverUrl: async (volumeId: number): Promise<string | null> => {
     try {
       // Check cache first
       const cacheKey = `volume_${volumeId}`;
       const cachedImage = imageCache[cacheKey];
       
-      if (cachedImage && Date.now() - cachedImage.timestamp < CACHE_EXPIRY) {
-        return cachedImage.url;
-      }
+      // if (cachedImage && Date.now() - cachedImage.timestamp < CACHE_EXPIRY) {
+      //   return cachedImage.url;
+      // }
       
       // Get image source from API (will be URL for native, Blob for web)
       const imageSource = await getVolumeCoverImageUrl(volumeId);
       
       if (!imageSource) {
-        return '';
+        return null;
       }
       
       // Convert to usable URL
-      const imageSourceObj = getImageSource(imageSource, cacheKey);
+      const imageSourceObj = await getImageSource(imageSource, cacheKey);
       if (!imageSourceObj || !imageSourceObj.uri) {
-        return '';
+        return null;
       }
       
-      // Cache the result
-      imageCache[cacheKey] = { 
-        url: imageSourceObj.uri, 
-        timestamp: Date.now() 
-      };
+      // // Cache the result
+      // imageCache[cacheKey] = { 
+      //   url: imageSource.uri, 
+      //   timestamp: Date.now() 
+      // };
       
       return imageSourceObj.uri;
     } catch (error) {
       console.error(`Error getting volume cover URL for ${volumeId}:`, error);
-      return '';
+      return null
     }
   },
   
@@ -206,18 +206,18 @@ export const useMangaStore = create<MangaStoreState>((set, get) => ({
       }
       
       // Convert to usable URL
-      const imageSourceObj = getImageSource(imageSource, cacheKey);
+      const imageSourceObj = await getImageSource(imageSource, cacheKey);
       if (!imageSourceObj || !imageSourceObj.uri) {
         return '';
       }
       
       // Cache the result
       imageCache[cacheKey] = { 
-        url: imageSourceObj.uri, 
+        url: imageSource.toString(), 
         timestamp: Date.now() 
       };
       
-      return imageSourceObj.uri;
+      return imageSource.toString();
     } catch (error) {
       console.error(`Error getting chapter cover URL for ${chapterId}:`, error);
       return '';
