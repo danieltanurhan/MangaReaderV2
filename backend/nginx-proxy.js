@@ -70,38 +70,39 @@ app.post('/api-proxy', async (req, res) => {
     try {
     // Check if target is a string and contains image or cover paths
     if (typeof target === 'string' && (
+      target.includes('image') || 
       target.includes('/image/') || 
       target.includes('/cover/') ||
       target.startsWith('image/') ||
       target.startsWith('cover/')
-  )) {
-    // Set the response type to arraybuffer for binary data
-    const response = await axios({
-      method: 'GET',
-      url: url,
-      headers: headers,
-      responseType: 'arraybuffer'
-    });
-    console.log('Proxy response headers:', response.headers);
-    
-    res.set({
-      'Content-Type': response.headers['content-type'] || 'image/png',
-      'Content-Length': response.data.length,
-      'Cache-Control': response.headers['cache-control'] || 'public, max-age=60',
-      'ETag': response.headers['etag'],
-      'Last-Modified': response.headers['last-modified']
-  });
-
-    // Send the raw binary data
-    return res.send(response.data);
-  }
-  } catch (imageError) {
-      console.error('Image proxy error:', imageError);
-      return res.status(500).json({
-          message: 'Failed to proxy image',
-          details: imageError.message
+    )) {
+      // Set the response type to arraybuffer for binary data
+      const response = await axios({
+        method: 'GET',
+        url: url,
+        headers: headers,
+        responseType: 'arraybuffer'
       });
-  }
+      console.log('Proxy response headers:', response.headers);
+      
+      res.set({
+        'Content-Type': response.headers['content-type'] || 'image/png',
+        'Content-Length': response.data.length,
+        'Cache-Control': response.headers['cache-control'] || 'public, max-age=60',
+        'ETag': response.headers['etag'],
+        'Last-Modified': response.headers['last-modified']
+    });
+
+      // Send the raw binary data
+      return res.send(response.data);
+    }
+    } catch (imageError) {
+        console.error('Image proxy error:', imageError);
+        return res.status(500).json({
+            message: 'Failed to proxy image',
+            details: imageError.message
+        });
+    }
 
     
     // Make the request to the actual API

@@ -8,6 +8,7 @@ interface VerticalReaderProps {
   initialPage?: number;
   chapterId: number;
   onPageChange?: (pageNumber: number) => void;
+  isLoading?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -17,7 +18,8 @@ export default function VerticalReader({
   pages, 
   initialPage = 0,
   chapterId,
-  onPageChange 
+  onPageChange,
+  isLoading = false
 }: VerticalReaderProps) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const flatListRef = useRef<FlatList>(null);

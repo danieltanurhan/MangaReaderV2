@@ -77,6 +77,71 @@ export interface Page {
 }
 
 /**
+ * Interface representing detailed chapter metadata and file information
+ * Used in the reader to show chapter details and access files
+ */
+export interface ChapterDetails {
+  id: number;
+  range: string;
+  number: string;
+  pages: number;
+  isSpecial: boolean;
+  title: string;
+  files: {
+    id: number;
+    filePath: string;
+    pages: number;
+    bytes: number;
+    format: number;
+    created: string;
+    extension: string;
+  }[];
+}
+
+/**
+ * Interface representing extended chapter information including page dimensions
+ * Used to display chapter information in the reader and for layout calculations
+ */
+export interface ChapterInfo {
+  chapterNumber: string;
+  volumeNumber: string;
+  volumeId: number;
+  seriesName: string;
+  seriesFormat: number;
+  seriesId: number;
+  libraryId: number;
+  libraryType: number;
+  chapterTitle: string;
+  pages: number;
+  fileName: string;
+  isSpecial: boolean;
+  subtitle: string;
+  title: string;
+  seriesTotalPages: number;
+  seriesTotalPagesRead: number;
+  pageDimensions: {
+    width: number;
+    height: number;
+    pageNumber: number;
+    fileName: string;
+    isWide: boolean;
+  }[];
+}
+
+/**
+ * Interface representing a user's reading progress for a chapter
+ * Used to resume reading from the last page viewed
+ */
+export interface ReadingProgress {
+  volumeId: number;
+  chapterId: number;
+  pageNum: number;
+  seriesId: number;
+  libraryId: number;
+  lastModifiedUtc: string;
+}
+
+/**
  * Fetch all series from the Kavita API
  */
 export const getAllSeries = async (): Promise<MangaSeries[]> => {
@@ -264,15 +329,17 @@ export const getChapterCoverImageUrl = async (chapterId: number): Promise<any> =
  * @param pageNumber - The page number (zero-based index)
  * @returns Promise with image source (URL string for native, Blob for web)
  */
-export const getPageImageUrl = async (chapterId: number, pageNumber: number): Promise<ImageSource | null | string> => {
+export const getPageImageUrl = async (chapterId: number, pageNumber: number): Promise<any> => {
   try {
+    const apiKey = await getItem(StorageKeys.API_KEY);
+    
     // For native platforms, return a direct URL
     if (Platform.OS !== 'web') {
-      return await getDirectImageUrl('Reader/image', { chapterId, fileName: pageNumber });
+      return await getDirectImageUrl('reader/image', { chapterId, page: pageNumber });
     }
     
     // For web platform, use makeRequest to get binary data through proxy
-    return await makeRequest(`Reader/image?chapterId=${chapterId}&fileName=${pageNumber}`, 'GET');
+    return await makeRequest(`reader/image`, 'GET', null, {}, { chapterId, page: pageNumber, apiKey });
   } catch (error) {
     console.error(`Error fetching page image for chapter ${chapterId}, page ${pageNumber}:`, error);
     return null;
@@ -280,45 +347,49 @@ export const getPageImageUrl = async (chapterId: number, pageNumber: number): Pr
 };
 
 /**
- * Get recently updated series
+ * Get chapter details
+ * 
+ * @param chapterId - The chapter ID
+ * @returns Promise with chapter details
  */
-export const getRecentlyUpdatedSeries = async (pageSize: number = 20): Promise<MangaSeries[]> => {
+export const getChapterDetails = async (chapterId: number): Promise<any> => {
   try {
-    return await makeRequest('Series/recently-updated', 'POST', {
-      pageSize,
-      pageNumber: 1
-    });
+    return await makeRequest(`chapter`, 'GET', null, {}, { chapterId });
   } catch (error) {
-    console.error('Error fetching recently updated series:', error);
+    console.error(`Error fetching chapter details for chapter ${chapterId}:`, error);
     throw error;
   }
 };
 
 /**
- * Get on-deck series (series with unread chapters)
+ * Get extended chapter info including page dimensions
+ * 
+ * @param chapterId - The chapter ID
+ * @returns Promise with extended chapter info
  */
-export const getOnDeckSeries = async (pageSize: number = 20): Promise<MangaSeries[]> => {
+export const getChapterInfo = async (chapterId: number): Promise<any> => {
   try {
-    return await makeRequest('Series/on-deck', 'POST', {
-      pageSize,
-      pageNumber: 1
+    return await makeRequest(`reader/chapter-info`, 'GET', null, {}, { 
+      chapterId,
+      includeDimensions: true 
     });
   } catch (error) {
-    console.error('Error fetching on-deck series:', error);
+    console.error(`Error fetching chapter info for chapter ${chapterId}:`, error);
     throw error;
   }
 };
 
 /**
- * Search series by name
+ * Get reading progress for a chapter
+ * 
+ * @param chapterId - The chapter ID
+ * @returns Promise with reading progress info
  */
-export const searchSeries = async (query: string): Promise<MangaSeries[]> => {
+export const getChapterProgress = async (chapterId: number): Promise<any> => {
   try {
-    return await makeRequest('Series/search', 'POST', {
-      queryString: query
-    });
+    return await makeRequest(`reader/get-progress`, 'GET', null, {}, { chapterId });
   } catch (error) {
-    console.error(`Error searching for series with query "${query}":`, error);
+    console.error(`Error fetching reading progress for chapter ${chapterId}:`, error);
     throw error;
   }
 };
