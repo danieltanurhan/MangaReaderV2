@@ -209,9 +209,16 @@ export default function ReaderScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <StatusBar hidden />
-      
+
+      {/* Invisible button to toggle controls */}
+      <TouchableOpacity
+        style={styles.invisibleButton}
+        onPress={toggleControls}
+        activeOpacity={1} // Prevents visual feedback
+      />
+
       {/* Main reader component */}
-      <View style={styles.readerContainer} onTouchStart={toggleControls}>
+      <View style={styles.readerContainer}>
         {readingMode === 'vertical' ? (
           <VerticalReader
             pages={pages}
@@ -230,7 +237,7 @@ export default function ReaderScreen() {
           />
         )}
       </View>
-      
+
       {/* Controls overlay - shown or hidden based on state */}
       {isControlsVisible && (
         <View style={styles.controlsOverlay} pointerEvents="box-none">
@@ -239,45 +246,42 @@ export default function ReaderScreen() {
             <TouchableOpacity onPress={handleBackPress} style={styles.iconButton}>
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
-            
+
             <ThemedText style={styles.pageIndicator}>
               Page {currentPage} of {totalPages}
             </ThemedText>
-            
+
             <View style={styles.rightControls}>
               <TouchableOpacity onPress={toggleReadingMode} style={styles.iconButton}>
-                <Ionicons 
-                  name={readingMode === 'vertical' ? 'book-outline' : 'menu-outline'} 
-                  size={24} 
+                <Ionicons
+                  name={readingMode === 'vertical' ? 'book-outline' : 'menu-outline'}
+                  size={24}
                   color="white"
                 />
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {/* Bottom control bar */}
           <View style={styles.bottomBar}>
-            {/* Previous page button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.navButton}
               onPress={() => handleProgressUpdate(Math.max(1, currentPage - 1))}
               disabled={currentPage <= 1}
             >
               <Ionicons name="chevron-back" size={24} color="white" />
             </TouchableOpacity>
-            
-            {/* Reading progress slider could go here */}
+
             <View style={styles.progressIndicator}>
-              <View 
+              <View
                 style={[
-                  styles.progressBar, 
-                  { width: `${(currentPage / totalPages) * 100}%` }
-                ]} 
+                  styles.progressBar,
+                  { width: `${(currentPage / totalPages) * 100}%` },
+                ]}
               />
             </View>
-            
-            {/* Next page button */}
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.navButton}
               onPress={() => handleProgressUpdate(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
@@ -297,6 +301,16 @@ const styles = StyleSheet.create({
   },
   readerContainer: {
     flex: 1,
+  },
+  invisibleButton: {
+    position: 'absolute', // Position it relative to the screen
+    top: '50%', // Center vertically
+    left: '50%', // Center horizontally
+    transform: [{ translateX: -25 }, { translateY: -25 }], // Offset by half the width/height to truly center
+    width: 150, // Set a fixed width
+    height: 150, // Set a fixed height
+    backgroundColor: 'transparent', // Invisible
+    zIndex: 1, // Ensures it is above the reader
   },
   controlsOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -326,7 +340,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     fontSize: 14,
-    color: 'white'
+    color: 'white',
   },
   loadingContainer: {
     flex: 1,
