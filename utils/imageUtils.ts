@@ -17,13 +17,13 @@ export async function getImageSource(
   cacheKey: string
 ): Promise<{ uri: string } | null> {
   if (!imageData) return null;
-  console.log('Received imageData type:', typeof imageData);
-  console.log('First 10 chars/bytes:', imageData?.toString().substring(0, 10));
+  // console.log('Received imageData type:', typeof imageData);
+  // console.log('First 10 chars/bytes:', imageData?.toString().substring(0, 10));
 
 
   // Case 1: Already a URL (web or native)
   if (typeof imageData === 'string' && imageData.startsWith('http')) {
-    console.log('Image data is a URL:', imageData);
+    // console.log('Image data is a URL:', imageData);
     return { uri: imageData };
   }
   
@@ -34,7 +34,7 @@ export async function getImageSource(
  // Handle binary data (web)
  if (imageData instanceof ArrayBuffer || 
   imageData instanceof Uint8Array) {
-    console.log('inside binary data conversion');
+    // console.log('inside binary data conversion');
     // Web-safe approach for converting binary to base64
     binaryData = imageData instanceof ArrayBuffer ? new Uint8Array(imageData) : imageData;
     const base64 = Array.from(binaryData)

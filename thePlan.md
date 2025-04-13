@@ -33,7 +33,7 @@
 - Create reader settings (direction, zoom, etc.)
 
 #### Implementation Details
-- Create `app/(main)/reader/[chapterId].tsx`
+- Create `app/main/reader/[chapterId].tsx`
 - Implement API functions for fetching pages
 - Create reader components with gesture handling
 - Implement progress tracking and syncing
@@ -56,7 +56,7 @@
 - Server management features
 
 #### Implementation Details
-- Create `app/(main)/settings.tsx`
+- Create `app/main/settings.tsx`
 - Create settings store
 - Implement preference saving
 

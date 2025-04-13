@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.dancando.MangaReaderV2"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +37,18 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a1a9a5db-ffd2-472c-80cf-e7e867d9c7f4"
+      },
+      "proxyServerUrl": "https://us-central1-mangareaderv2-1ad38.cloudfunctions.net/app"
+
+      
+    },
+    "owner": "dancando"
   }
 }

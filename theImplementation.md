@@ -9,7 +9,7 @@ Remove the duplicated interface definitions (since we're moving them to manga.ts
 Verify that the existing image caching implementation works correctly
 Ensure all implemented methods follow consistent error handling patterns
 Fix type inconsistencies in the return values (e.g., getChapterCoverUrl returns string but might be null)
-3. app/(main)/reader/[chapterId].tsx
+3. app/main/reader/[chapterId].tsx
 Update the component to use the useMangaStore functions instead of directly calling the API
 Implement parallel loading of chapter data (details, info, progress, pages)
 Start the reader at the saved reading progress position

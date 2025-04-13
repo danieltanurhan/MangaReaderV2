@@ -42,19 +42,23 @@ export default function PageReader({
       const page = viewableItems[0].item as Page;
       const pageNumber = page.pageNumber;
       
-      // Update internal state with the current page index (0-based)
-      setCurrentPage(pageNumber - 1);
-      
-      // Call the parent component with the 1-based page number
-      if (onPageChange) {
-        onPageChange(pageNumber);
+      // Check if this is a different page than the currently tracked one
+      // We need to compare with the 1-based page number from the currently tracked 0-based index
+      if (pageNumber !== currentPage + 1) {
+        // Update internal state with the current page index (0-based)
+        setCurrentPage(pageNumber - 1);
+        
+        // Call the parent component with the 1-based page number
+        if (onPageChange) {
+          onPageChange(pageNumber);
+        }
+        
+        // Preload adjacent pages when the current page changes
+        preloadAdjacentPages(pageNumber);
+        
+        // Immediately load the image for the current page
+        loadPageImage(pageNumber);
       }
-      
-      // Preload adjacent pages when the current page changes
-      preloadAdjacentPages(pageNumber);
-      
-      // Immediately load the image for the current page
-      loadPageImage(pageNumber);
     }
   }).current;
   
@@ -81,7 +85,7 @@ export default function PageReader({
     
     try {
       // Get the image URL from mangaStore (which handles caching internally)
-      const url = await getPageUrl(chapterId, pageNumber);
+      const url = await getPageUrl(chapterId, pageNumber - 1);
       
       // Store the URL in our local state
       setPageUrls(prev => ({ ...prev, [pageNumber]: url }));

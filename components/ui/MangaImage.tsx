@@ -37,8 +37,8 @@ export default function MangaImage({
     getChapterCoverUrl 
   } = useMangaStore();
 
-  console.log('MangaImage component mounted with source:', source, 'and type:', type);
-  console.log('Cache key:', cacheKey);
+  // console.log('MangaImage component mounted with source:', source, 'and type:', type);
+  // console.log('Cache key:', cacheKey);
 
   useEffect(() => {
     let mounted = true;
@@ -52,7 +52,7 @@ export default function MangaImage({
 
         // Direct URL string
         if (typeof source === 'string') {
-          console.log('Source is a string:', source);
+          // console.log('Source is a string:', source);
           finalImageUrl = source;
         } 
         // ID number (series, volume, chapter)

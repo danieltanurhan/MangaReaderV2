@@ -66,8 +66,8 @@ export default function ReaderScreen() {
       
       // Create page objects based on chapter info
       const pageObjects = Array.from({ length: info.pages }, (_, i) => ({
-        pageNumber: i + 1,
-        fileName: info.pageDimensions[i]?.fileName || `page_${i + 1}`,
+        pageNumber: i,
+        fileName: info.pageDimensions[i]?.fileName || `page_${i}`,
         image: '' // Will be loaded on demand by PageReader component
       }));
       
@@ -78,7 +78,7 @@ export default function ReaderScreen() {
       if (progress) {
         setCurrentPage(progress.pageNum);
       } else {
-        setCurrentPage(1);
+        setCurrentPage(0);
       }
       
       setIsLoading(false);
@@ -156,7 +156,12 @@ export default function ReaderScreen() {
   };
   
   const handleBackPress = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      // Navigate to a fallback screen if there's no screen to go back to
+      router.push(`/(main)/series/${currentChapterInfo?.seriesId}`);
+    }
   };
   
   // Retry loading if there was an error
@@ -213,7 +218,7 @@ export default function ReaderScreen() {
             chapterId={chapterIdNum}
             onPageChange={handleProgressUpdate}
             isLoading={isLoading}
-            initialPage={currentPage - 1}
+            initialPage={currentPage}
           />
         ) : (
           <PageReader
@@ -221,7 +226,7 @@ export default function ReaderScreen() {
             chapterId={chapterIdNum}
             onPageChange={handleProgressUpdate}
             isLoading={isLoading}
-            initialPage={currentPage - 1}
+            initialPage={currentPage}
           />
         )}
       </View>

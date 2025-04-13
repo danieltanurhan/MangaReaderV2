@@ -7,7 +7,7 @@ This is an Expo Router project with a file-based routing system, implementing a 
 ### Routing
 - Using Expo Router with file-based routing
 - Authentication flow via `/(auth)/connect.tsx`
-- Main content via `/(main)/home.tsx`
+- Main content via `/((main))/home.tsx`
 - Series details via `/(main)/series/[id].tsx`
 - Root layout handling navigation and auth checks
 

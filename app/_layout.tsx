@@ -33,7 +33,6 @@ export default function MainLayout() {
         name="(main)/series/[id]" 
         options={{ 
           headerShown: true,
-          presentation: 'push' 
         }} 
       />
       <Stack.Screen 

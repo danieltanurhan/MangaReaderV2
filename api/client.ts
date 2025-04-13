@@ -28,11 +28,11 @@ const getProxyBaseUrl = (): string | null => {
   
   // For development
   if (__DEV__) {
-    return 'http://localhost:3031';
+    return "https://us-central1-mangareaderv2-1ad38.cloudfunctions.net/app";
   }
   
   // For production
-  return Constants.expoConfig?.extra?.proxyServerUrl || 'https://your-proxy-server.com';
+  return Constants.expoConfig?.extra?.proxyServerUrl || 'https://us-central1-mangareaderv2-1ad38.cloudfunctions.net/app';
 };
 
 /**

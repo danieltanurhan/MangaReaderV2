@@ -73,7 +73,7 @@ export interface SeriesDetail extends MangaSeries {
 export interface Page {
   pageNumber: number;
   fileName: string;
-  image: string; // This could be a base64 string or URL depending on your API
+  image: string;
 }
 
 /**
